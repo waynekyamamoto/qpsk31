@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QPSK31 Interactive Demo</title>
+<style>
+:root {
+  --bg: #0d1117; --card: #161b22; --border: #30363d;
+  --text: #e6edf3; --muted: #7d8590;
+  --blue: #58a6ff; --green: #3fb950; --yellow: #d29922;
+  --red: #f85149; --orange: #ffa657; --purple: #bc8cff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; }
+.mono { font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; }
+header { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 24px; }
+header h1 { font-size: 17px; font-weight: 600; margin-bottom: 2px; }
+header p { color: var(--muted); font-size: 12px; }
+main { max-width: 980px; margin: 0 auto; padding: 20px 24px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+.card-head { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+.step-num { width: 20px; height: 20px; border-radius: 50%; background: var(--blue); color: #000; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.card-head h2 { font-size: 13px; font-weight: 600; flex: 1; }
+.card-head .hint { color: var(--muted); font-size: 11px; }
+.card-body { padding: 14px; }
+.pipe-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 0 10px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+input[type=text] { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 8px 12px; font-size: 15px; font-family: inherit; }
+input[type=text]:focus { outline: none; border-color: var(--blue); }
+.row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+button { background: var(--blue); color: #000; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 600; cursor: pointer; font-size: 13px; white-space: nowrap; }
+button:hover { opacity: .9; } button:active { opacity: .8; }
+button:disabled { opacity: .4; cursor: default; }
+.btn-green { background: var(--green); }
+.btn-sec { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+.params { font-size: 11px; color: var(--muted); } .params b { color: var(--text); }
+.vc-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.vc-box { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 5px 9px; text-align: center; min-width: 48px; }
+.vc-ch { font-size: 15px; font-weight: 700; font-family: monospace; }
+.vc-code { font-size: 10px; font-family: monospace; color: var(--muted); word-break: break-all; }
+.vc-len { font-size: 9px; color: var(--muted); }
+.section-lbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.bitstream { display: flex; flex-wrap: wrap; gap: 1px; font-family: monospace; font-size: 11px; padding: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; max-height: 72px; overflow-y: auto; margin-bottom: 4px; }
+.b { width: 13px; height: 17px; display: inline-flex; align-items: center; justify-content: center; border-radius: 2px; }
+.b-sep { color: #3a3a3a; background: #1a1a1a; }
+.b-pre { color: #444; }
+.chip { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 11px; font-family: monospace; margin: 2px; }
+.chip .lbl { color: var(--muted); margin-right: 3px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--border); font-family: monospace; }
+th { color: var(--muted); font-size: 10px; text-transform: uppercase; font-family: inherit; }
+.two-col { display: grid; grid-template-columns: 270px 1fr; gap: 16px; align-items: start; }
+canvas { display: block; }
+.cv-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 10px; overflow: hidden; }
+.decoded { font-family: monospace; font-size: 20px; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; margin-top: 8px; letter-spacing: .02em; }
+.ok { color: var(--green); } .err { color: var(--red); }
+.empty { color: var(--muted); font-size: 13px; text-align: center; padding: 20px; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+@media(max-width:650px){ .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>📡 QPSK31 Interactive Demo</h1>
+  <p>Quadrature Phase Shift Keying · 31.25 baud · ~62 Hz bandwidth · Rate-½ convolutional FEC</p>
+</header>
+<main>
+
+<!-- Input -->
+<div class="card">
+  <div class="card-head"><h2>Message</h2></div>
+  <div class="card-body">
+    <div class="row">
+      <input type="text" id="msg" value="Hello, World!" autocomplete="off" spellcheck="false">
+      <button id="encBtn">▶ Encode</button>
+    </div>
+    <div class="params">
+      Carrier <b>1000 Hz</b> &nbsp;·&nbsp; Symbol rate <b>31.25 baud</b> &nbsp;·&nbsp;
+      Samples/symbol <b>256</b> &nbsp;·&nbsp; Sample rate <b>8000 Hz</b> &nbsp;·&nbsp;
+      FEC <b>K=5, rate ½, g₀=0x17, g₁=0x19</b>
+    </div>
+  </div>
+</div>
+
+<div class="pipe-label">↓ encoding pipeline</div>
+
+<!-- Step 1 -->
+<div class="card">
+  <div class="card-head">
+    <div class="step-num">1</div>
+    <h2>Text → Varicode</h2>
+    <span class="hint">Shorter codes for common letters (e=2 bits, space=1 bit)</span>
+  </div>
+  <div class="card-body">
+    <div id="vcGrid" class="vc-grid"></div>
+    <div class="section-lbl">Full bit stream — <span id="vcCount">—</span> data bits · colors = characters · grey = 00 separators</div>
+    <div id="vcBits" class="bitstream"></div>
+  </div>
+</div>
+
+<!-- Step 2 -->
+<div class="card">
+  <div class="card-head">
+    <div class="step-num">2</div>
+    <h2>Varicode bits → Convolutional encoding</h2>
+    <span class="hint">Each input bit → one (g₀,g₁) output dibit</span>
+  </div>
+  <div class="card-body">
+    <div class="stat-row" id="convChips"></div>
+    <div id="convTable"></div>
+  </div>
+</div>
+
+<!-- Step 3 -->
+<div class="card">
+  <div class="card-head">
+    <div class="step-num">3</div>
+    <h2>Dibits → Differential QPSK phases</h2>
+    <span class="hint">Each dibit adds a phase rotation; receiver decodes the change, not the absolute phase</span>
+  </div>
+  <div class="card-body">
+    <div class="two-col">
+      <div>
+        <div class="section-lbl">IQ constellation — phase trajectory</div>
+        <canvas id="constCv" width="260" height="260"></canvas>
+      </div>
+      <div>
+        <div class="section-lbl">Phase mapping table</div>
+        <table>
+          <tr><th>Dibit</th><th>Phase Δ</th><th>IQ move</th></tr>
+          <tr><td>(0,0)</td><td style="color:var(--blue)">0°</td><td>stay</td></tr>
+          <tr><td>(0,1)</td><td style="color:var(--green)">+90°</td><td>CCW ¼ turn</td></tr>
+          <tr><td>(1,1)</td><td style="color:var(--red)">+180°</td><td>flip</td></tr>
+          <tr><td>(1,0)</td><td style="color:var(--orange)">+270°</td><td>CW ¼ turn</td></tr>
+        </table>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);line-height:1.6">
+          Differential encoding means the <em>change</em> in phase carries the data — the receiver doesn't need a phase reference, just the delta between consecutive symbols.
+        </div>
+        <div id="phaseInfo" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 4 -->
+<div class="card">
+  <div class="card-head">
+    <div class="step-num">4</div>
+    <h2>Modulate → Audio signal</h2>
+    <span class="hint">256 samples per symbol at 8 kHz · exactly 32 carrier cycles per symbol</span>
+  </div>
+  <div class="card-body">
+    <div class="row" style="margin-bottom:10px">
+      <button id="playBtn" class="btn-green" disabled>▶ Play</button>
+      <span id="playStat" style="font-size:12px;color:var(--muted)">—</span>
+    </div>
+    <div class="stat-row" id="audioChips"></div>
+    <div class="section-lbl">Full waveform</div>
+    <div class="cv-wrap"><canvas id="waveCv" height="70"></canvas></div>
+    <div class="section-lbl">Zoomed — 8 symbols of data (past preamble) · vertical lines = symbol boundaries</div>
+    <div class="cv-wrap"><canvas id="waveZoomCv" height="90"></canvas></div>
+    <div class="section-lbl">Frequency spectrum (FFT, Hann window, 4096 samples) · orange = carrier · green = ~62 Hz bandwidth</div>
+    <div class="cv-wrap"><canvas id="specCv" height="130"></canvas></div>
+  </div>
+</div>
+
+<div class="pipe-label">↓ decoding pipeline (same audio buffer)</div>
+
+<!-- Step 5 -->
+<div class="card">
+  <div class="card-head">
+    <div class="step-num">5</div>
+    <h2>I/Q demodulation → received dibits</h2>
+    <span class="hint">Correlate each 256-sample block against cos and −sin references</span>
+  </div>
+  <div class="card-body" id="demodBody"><div class="empty">Encode a message to see results.</div></div>
+</div>
+
+<!-- Step 6 -->
+<div class="card">
+  <div class="card-head">
+    <div class="step-num">6</div>
+    <h2>Viterbi decoder → recovered bits</h2>
+    <span class="hint">Minimum Hamming-distance traceback through 16-state trellis</span>
+  </div>
+  <div class="card-body" id="viterbiBody"><div class="empty">Encode a message to see results.</div></div>
+</div>
+
+<!-- Step 7 -->
+<div class="card">
+  <div class="card-head">
+    <div class="step-num">7</div>
+    <h2>Varicode decode → text</h2>
+    <span class="hint">Scan for '00' boundaries, look up each code</span>
+  </div>
+  <div class="card-body" id="decodeBody"><div class="empty">Encode a message to see results.</div></div>
+</div>
+
+</main>
+<script>
+// ─────────────────────────────────────────────────────────────
+// VARICODE TABLE  (PSK31 spec, Peter Martinez G3PLX)
+// ─────────────────────────────────────────────────────────────
+const VC = {
+  0:"1010101011",1:"1011011011",2:"1011101101",3:"1101110111",4:"1011101011",
+  5:"1101011111",6:"1011101111",7:"1011111101",8:"1011111111",9:"11101111",
+  10:"11101",11:"1101101111",12:"1011011101",13:"11111",14:"1101110101",
+  15:"1110101011",16:"1011110111",17:"1011110101",18:"1110101101",19:"1110101111",
+  20:"1101011011",21:"1101101011",22:"1101101101",23:"1101010111",24:"1101111011",
+  25:"1101111101",26:"1110110111",27:"1101010101",28:"1101011101",29:"1110111011",
+  30:"1011111011",31:"1101111111",
+  32:"1",33:"111111111",34:"101011111",35:"111110101",36:"111011011",
+  37:"1011010101",38:"1010111011",39:"101111111",40:"11111011",41:"11110111",
+  42:"101101111",43:"111011111",44:"1110101",45:"110101",46:"1010111",47:"110101111",
+  48:"10110111",49:"10111101",50:"11101101",51:"11111111",52:"101110111",
+  53:"101011011",54:"101101011",55:"110101101",56:"110101011",57:"110110111",
+  58:"11110101",59:"110111101",60:"111101101",61:"1010101",62:"111010111",
+  63:"1010101111",64:"1010111101",
+  65:"1111101",66:"11101011",67:"10101101",68:"10110101",69:"1110111",
+  70:"11011011",71:"11111101",72:"101010101",73:"1111111",74:"111111101",
+  75:"101111101",76:"11010111",77:"10111011",78:"11011101",79:"10101011",
+  80:"11010101",81:"111011101",82:"10101111",83:"1101111",84:"1101101",
+  85:"101010111",86:"110110101",87:"101011101",88:"101110101",89:"101111011",
+  90:"1010101101",91:"111110111",92:"111101111",93:"111111011",94:"1010111111",
+  95:"101101101",96:"1011011111",
+  97:"1011",98:"1011111",99:"101111",100:"101101",101:"11",102:"111101",
+  103:"1011011",104:"101011",105:"1101",106:"111101011",107:"10111111",
+  108:"11011",109:"111011",110:"1111",111:"111",112:"111111",113:"110111111",
+  114:"10101",115:"10111",116:"101",117:"110111",118:"1111011",119:"1101011",
+  120:"11011111",121:"1011101",122:"111010101",
+  123:"1010110111",124:"110111011",125:"1010110101",126:"1011010111",127:"1110110101"
+};
+const VC_REV = {};
+for (const [k,v] of Object.entries(VC)) VC_REV[v] = +k;
+
+function vcEncode(text) {
+  const bits = [];
+  for (const ch of text) {
+    const code = VC[ch.charCodeAt(0)];
+    if (!code) continue;
+    bits.push(...code.split('').map(Number), 0, 0);
+  }
+  return bits;
+}
+
+function vcDecode(bits) {
+  const out = []; let cur = [], i = 0;
+  while (i < bits.length) {
+    if (bits[i] === 1) { cur.push(1); i++; }
+    else if (i+1 < bits.length && bits[i+1] === 0) {
+      if (cur.length) {
+        const c = VC_REV[cur.join('')];
+        if (c !== undefined) out.push(String.fromCharCode(c));
+      }
+      cur = []; i += 2;
+    } else { cur.push(0); i++; }
+  }
+  if (cur.length) { const c = VC_REV[cur.join('')]; if (c !== undefined) out.push(String.fromCharCode(c)); }
+  return out.join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONVOLUTIONAL CODE  K=5, rate 1/2
+// g0: x0^x1^x2^x4  g1: x0^x3^x4
+// state: bit0=last input, bit3=4th-last
+// ─────────────────────────────────────────────────────────────
+const NSTATES = 16;
+function encOut(s, b) {
+  const x0=b, x1=(s>>0)&1, x2=(s>>1)&1, x3=(s>>2)&1, x4=(s>>3)&1;
+  return [x0^x1^x2^x4, x0^x3^x4];
+}
+function nxtSt(s, b) { return (b&1)|((s&7)<<1); }
+
+function convEncode(bits) {
+  let s=0; const dib=[];
+  for (const b of bits) { dib.push(encOut(s,b)); s=nxtSt(s,b); }
+  return dib;
+}
+
+function viterbi(dibits) {
+  const T=dibits.length; if(!T) return [];
+  const INF=T*3;
+  let pm=new Array(NSTATES).fill(INF); pm[0]=0;
+  const tbP=Array.from({length:T},()=>new Int8Array(NSTATES).fill(-1));
+  const tbB=Array.from({length:T},()=>new Int8Array(NSTATES).fill(-1));
+  for (let t=0;t<T;t++) {
+    const [r0,r1]=dibits[t], npm=new Array(NSTATES).fill(INF);
+    for (let s=0;s<NSTATES;s++) {
+      if(pm[s]===INF) continue;
+      for (let b=0;b<2;b++) {
+        const [g0,g1]=encOut(s,b), bm=(r0!==g0?1:0)+(r1!==g1?1:0);
+        const ns=nxtSt(s,b), m=pm[s]+bm;
+        if(m<npm[ns]){npm[ns]=m;tbP[t][ns]=s;tbB[t][ns]=b;}
+      }
+    }
+    pm=npm;
+  }
+  let best=0; for(let s=1;s<NSTATES;s++) if(pm[s]<pm[best]) best=s;
+  const bits=[]; let s=best;
+  for(let t=T-1;t>=0;t--){bits.push(tbB[t][s]);s=tbP[t][s];}
+  bits.reverse(); return bits;
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULATOR / DEMODULATOR
+// ─────────────────────────────────────────────────────────────
+const SR=8000, SPY=256, FC=1000.0, PI2=2*Math.PI;
+const PRE=32, TAIL=4;
+const PD={'0,0':0,'0,1':Math.PI/2,'1,1':Math.PI,'1,0':3*Math.PI/2};
+const I2D=[[0,0],[0,1],[1,1],[1,0]];
+
+function modulate(dibits) {
+  const out=new Float32Array(dibits.length*SPY); let ph=0;
+  for (let i=0;i<dibits.length;i++) {
+    ph+=PD[dibits[i].join(',')];
+    const s=i*SPY;
+    for (let n=0;n<SPY;n++) out[s+n]=Math.cos(PI2*FC*(s+n)/SR+ph);
+  }
+  return out;
+}
+
+function demodulate(samples) {
+  const N=SPY, ns=Math.floor(samples.length/N), dib=[];
+  let pp=0; const sc=2/N;
+  for (let i=0;i<ns;i++) {
+    const s=i*N; let I=0,Q=0;
+    for (let n=0;n<N;n++) {
+      const t=(s+n)/SR;
+      I+=samples[s+n]*Math.cos(PI2*FC*t);
+      Q+=samples[s+n]*(-Math.sin(PI2*FC*t));
+    }
+    I*=sc; Q*=sc;
+    const cp=Math.atan2(Q,I);
+    let d=(cp-pp)%(PI2); if(d<0)d+=PI2;
+    dib.push(I2D[Math.round(d/(Math.PI/2))%4]);
+    pp=cp;
+  }
+  return dib;
+}
+
+// ─────────────────────────────────────────────────────────────
+// FFT (iterative Cooley-Tukey)
+// ─────────────────────────────────────────────────────────────
+function fft(re,im) {
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){
+    let bit=n>>1;
+    for(;j&bit;bit>>=1)j^=bit;
+    j^=bit;
+    if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}
+  }
+  for(let len=2;len<=n;len<<=1){
+    const a=-PI2/len,wr=Math.cos(a),wi=Math.sin(a);
+    for(let i=0;i<n;i+=len){
+      let cr=1,ci=0;
+      for(let j=0;j<len>>1;j++){
+        const ur=re[i+j],ui=im[i+j];
+        const vr=re[i+j+(len>>1)]*cr-im[i+j+(len>>1)]*ci;
+        const vi=re[i+j+(len>>1)]*ci+im[i+j+(len>>1)]*cr;
+        re[i+j]=ur+vr;im[i+j]=ui+vi;
+        re[i+j+(len>>1)]=ur-vr;im[i+j+(len>>1)]=ui-vi;
+        const nr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=nr;
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// COLOUR PALETTE for characters
+// ─────────────────────────────────────────────────────────────
+const PAL=['#ff6b6b','#ffa94d','#ffe066','#69db7c',
+           '#38d9a9','#74c0fc','#9775fa','#f783ac',
+           '#da77f2','#ff8787','#ffc078','#a9e34b'];
+
+// ─────────────────────────────────────────────────────────────
+// DRAWING HELPERS
+// ─────────────────────────────────────────────────────────────
+function fitCanvas(cv) {
+  const w=cv.parentElement.clientWidth;
+  if(cv.width!==w){cv.width=w;}
+}
+
+function drawWave(cv, samples, s0, s1, symBoundaries) {
+  fitCanvas(cv);
+  const W=cv.width,H=cv.height,ctx=cv.getContext('2d');
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  const cy=H/2, range=s1-s0;
+  // zero line
+  ctx.strokeStyle='#1c2128';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+  // symbol boundaries
+  if(symBoundaries){
+    ctx.strokeStyle='rgba(88,166,255,0.18)';ctx.lineWidth=1;
+    for(const b of symBoundaries){
+      const x=((b-s0)/range)*W;
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+    }
+  }
+  // waveform
+  ctx.strokeStyle='#58a6ff';ctx.lineWidth=1;
+  ctx.beginPath();
+  for(let px=0;px<W;px++){
+    const si=s0+Math.round(px*range/W);
+    const y=cy-samples[Math.min(si,samples.length-1)]*(H*0.44);
+    px===0?ctx.moveTo(px,y):ctx.lineTo(px,y);
+  }
+  ctx.stroke();
+}
+
+function drawSpectrum(cv, samples) {
+  fitCanvas(cv);
+  const W=cv.width,H=cv.height,ctx=cv.getContext('2d');
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  const N=4096;
+  const re=new Float64Array(N),im=new Float64Array(N);
+  const len=Math.min(N,samples.length);
+  for(let i=0;i<len;i++){
+    const w=0.5*(1-Math.cos(PI2*i/len));
+    re[i]=samples[i]*w;
+  }
+  fft(re,im);
+  // magnitude in dB, show 0..2500 Hz
+  const FMAX=2500, BINS=Math.round(FMAX*N/SR);
+  const DB_MIN=-65;
+  const mag=new Float32Array(BINS);
+  let mx=0;
+  for(let i=0;i<BINS;i++){mag[i]=Math.sqrt(re[i]*re[i]+im[i]*im[i]);if(mag[i]>mx)mx=mag[i];}
+  const db=i=>20*Math.log10(mag[i]/mx+1e-10);
+  // grid lines
+  ctx.strokeStyle='#1c2128';ctx.lineWidth=1;
+  for(let d=-10;d>=DB_MIN;d-=10){
+    const y=H*(1-d/DB_MIN);
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+    ctx.fillStyle='#3a3a3a';ctx.font='9px monospace';ctx.fillText(d+'dB',2,y-2);
+  }
+  // freq labels
+  ctx.fillStyle='#7d8590';ctx.font='9px monospace';
+  for(let f=500;f<=FMAX;f+=500){
+    const x=f*W/FMAX;
+    ctx.fillStyle='#3a3a3a';ctx.fillText(f+'Hz',x+2,H-2);
+    ctx.strokeStyle='#1c2128';ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+  }
+  // filled spectrum
+  ctx.fillStyle='rgba(88,166,255,0.18)';ctx.strokeStyle='#58a6ff';ctx.lineWidth=1.5;
+  ctx.beginPath();
+  for(let i=0;i<BINS;i++){
+    const x=i*W/BINS,y=H*(1-Math.max(db(i),DB_MIN)/DB_MIN);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.closePath();
+  ctx.fill();ctx.stroke();
+  // bandwidth band ±31 Hz around carrier
+  const bw=31;
+  const bx1=(FC-bw)*W/FMAX,bx2=(FC+bw)*W/FMAX;
+  ctx.fillStyle='rgba(63,185,80,0.07)';
+  ctx.fillRect(bx1,0,bx2-bx1,H);
+  ctx.strokeStyle='rgba(63,185,80,0.4)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.strokeRect(bx1,0,bx2-bx1,H);ctx.setLineDash([]);
+  // carrier line
+  const fcx=FC*W/FMAX;
+  ctx.strokeStyle='#ffa657';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+  ctx.beginPath();ctx.moveTo(fcx,0);ctx.lineTo(fcx,H);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#ffa657';ctx.font='10px monospace';ctx.fillText(FC+'Hz',fcx+3,12);
+  ctx.fillStyle='rgba(63,185,80,0.8)';ctx.font='9px monospace';
+  ctx.fillText('~62Hz BW',bx2+2,20);
+}
+
+function drawConstellation(cv, dibits) {
+  const W=cv.width,H=cv.height,ctx=cv.getContext('2d');
+  const cx=W/2,cy=H/2,R=Math.min(W,H)*0.36;
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+  // axes
+  ctx.strokeStyle='#2a3040';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(cx-R-14,cy);ctx.lineTo(cx+R+14,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy-R-14);ctx.lineTo(cx,cy+R+14);ctx.stroke();
+  // circle
+  ctx.beginPath();ctx.arc(cx,cy,R,0,PI2);ctx.stroke();
+  // axis labels
+  ctx.fillStyle='#3a4050';ctx.font='10px monospace';ctx.textAlign='center';
+  ctx.fillText('I',cx+R+10,cy+4);ctx.fillText('Q',cx,cy-R-6);
+  // reference phase points
+  const REFPH=[0,Math.PI/2,Math.PI,3*Math.PI/2];
+  const REFC=['#58a6ff','#3fb950','#f85149','#ffa657'];
+  const REFL=['(0,0)\n0°','(0,1)\n90°','(1,1)\n180°','(1,0)\n270°'];
+  for(let i=0;i<4;i++){
+    const px=cx+R*Math.cos(REFPH[i]),py=cy-R*Math.sin(REFPH[i]);
+    ctx.fillStyle=REFC[i];ctx.beginPath();ctx.arc(px,py,5,0,PI2);ctx.fill();
+    ctx.fillStyle=REFC[i];ctx.font='9px monospace';ctx.textAlign='center';
+    const lp=i===0?14:i===2?-14:0, lq=i===1?-14:i===3?14:0;
+    const lx=cx+(R+18)*Math.cos(REFPH[i])+lp;
+    const ly=cy-(R+18)*Math.sin(REFPH[i])+lq;
+    const parts=REFL[i].split('\n');
+    ctx.fillText(parts[0],lx,ly-5);ctx.fillText(parts[1],lx,ly+6);
+  }
+  // trajectory (data dibits only, skip preamble)
+  if(dibits.length>PRE){
+    let ph=0;
+    // advance through preamble silently
+    for(let i=0;i<PRE;i++) ph+=PD[dibits[i].join(',')];
+    const pts=[];
+    for(let i=PRE;i<dibits.length;i++){
+      ph+=PD[dibits[i].join(',')];
+      pts.push([cx+R*Math.cos(ph),cy-R*Math.sin(ph)]);
+    }
+    if(pts.length>1){
+      ctx.strokeStyle='rgba(88,166,255,0.2)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+      ctx.stroke();
+    }
+    for(let i=0;i<pts.length;i++){
+      const a=0.2+0.7*(i/pts.length);
+      ctx.fillStyle=`rgba(88,166,255,${a})`;
+      ctx.beginPath();ctx.arc(pts[i][0],pts[i][1],2.5,0,PI2);ctx.fill();
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN PIPELINE
+// ─────────────────────────────────────────────────────────────
+let gSamples=null, gDibits=null;
+
+function run() {
+  const text=document.getElementById('msg').value;
+  const vcBits=vcEncode(text);
+  const allBits=[...new Array(PRE).fill(0),...vcBits,...new Array(TAIL).fill(0)];
+  const dibits=convEncode(allBits);
+  const samples=modulate(dibits);
+  gSamples=samples; gDibits=dibits;
+
+  renderStep1(text,vcBits);
+  renderStep2(allBits,dibits);
+  renderStep3(dibits);
+  renderStep4(samples,dibits);
+  renderStep5(dibits);
+  renderStep6(dibits);
+  renderStep7(dibits,text);
+}
+
+// ─────────────────────────────────────────────────────────────
+// STEP 1 RENDER
+// ─────────────────────────────────────────────────────────────
+function renderStep1(text,vcBits) {
+  const grid=document.getElementById('vcGrid');
+  const bsDiv=document.getElementById('vcBits');
+  grid.innerHTML='';
+  // character boxes
+  for(let ci=0;ci<text.length;ci++){
+    const ch=text[ci], code=VC[ch.charCodeAt(0)]||'?';
+    const col=PAL[ci%PAL.length];
+    const d=document.createElement('div');
+    d.className='vc-box';
+    d.style.borderColor=col+'55';
+    d.innerHTML=`<div class="vc-ch" style="color:${col}">${ch===' '?'SP':escH(ch)}</div>`+
+                `<div class="vc-code">${code}</div>`+
+                `<div class="vc-len">${code.length} bits</div>`;
+    grid.appendChild(d);
+  }
+  // bit stream
+  bsDiv.innerHTML='';
+  let charIdx=-1,inCode=false;
+  let bitPos=0;
+  for(let ci=0;ci<text.length;ci++){
+    const code=VC[text.charCodeAt(ci)]||'';
+    const col=PAL[ci%PAL.length];
+    for(const b of code){
+      const sp=document.createElement('span');
+      sp.className='b mono';
+      sp.textContent=b;
+      sp.style.background=col+'33';sp.style.color=col;
+      bsDiv.appendChild(sp);
+    }
+    // separator
+    for(let k=0;k<2;k++){
+      const sp=document.createElement('span');
+      sp.className='b mono b-sep';sp.textContent='0';
+      bsDiv.appendChild(sp);
+    }
+  }
+  document.getElementById('vcCount').textContent=vcBits.length;
+}
+
+// ─────────────────────────────────────────────────────────────
+// STEP 2 RENDER
+// ─────────────────────────────────────────────────────────────
+function renderStep2(allBits,dibits) {
+  document.getElementById('convChips').innerHTML=
+    chip('input bits',allBits.length)+
+    chip('output dibits',dibits.length)+
+    chip('rate','1/2 (1 bit → 1 dibit)')+
+    chip('states','16  (2⁴)');
+  // show first PRE+20 rows, then ...
+  const SHOW=10;
+  let html='<div style="overflow-x:auto"><table>'+
+    '<tr><th>#</th><th>input bit</th><th>state (binary)</th><th>g₀</th><th>g₁</th><th>dibit</th><th>note</th></tr>';
+  let st=0;
+  const rows=Math.min(allBits.length,PRE+SHOW);
+  for(let i=0;i<rows;i++){
+    const b=allBits[i],[g0,g1]=encOut(st,b);
+    const ns=nxtSt(st,b);
+    const stB=st.toString(2).padStart(4,'0');
+    const note=i<PRE?'<span style="color:var(--muted)">preamble</span>':
+                     '<span style="color:var(--blue)">data</span>';
+    const dc=dibitColor([g0,g1]);
+    html+=`<tr><td>${i}</td><td>${b}</td><td>${stB}</td>` +
+          `<td>${g0}</td><td>${g1}</td>` +
+          `<td style="color:${dc}">(${g0},${g1})</td><td>${note}</td></tr>`;
+    if(i===PRE-1&&allBits.length>rows)
+      html+=`<tr><td colspan="7" style="color:var(--muted);text-align:center">… ${PRE} preamble symbols …</td></tr>`;
+    st=ns;
+  }
+  if(allBits.length>rows)
+    html+=`<tr><td colspan="7" style="color:var(--muted);text-align:center">… ${allBits.length-rows} more symbols …</td></tr>`;
+  html+='</table></div>';
+  document.getElementById('convTable').innerHTML=html;
+}
+
+// ─────────────────────────────────────────────────────────────
+// STEP 3 RENDER
+// ─────────────────────────────────────────────────────────────
+function renderStep3(dibits) {
+  drawConstellation(document.getElementById('constCv'),dibits);
+  // phase distribution
+  const counts={'0,0':0,'0,1':0,'1,1':0,'1,0':0};
+  for(const d of dibits.slice(PRE)) counts[d.join(',')]=(counts[d.join(',')]||0)+1;
+  const total=dibits.length-PRE||1;
+  let html='<div class="section-lbl">Dibit distribution (data symbols only)</div>'+
+           '<div class="stat-row">';
+  for(const [k,n] of Object.entries(counts)){
+    const pct=((n/total)*100).toFixed(0);
+    html+=chip(k, `${n} (${pct}%)`);
+  }
+  html+='</div>';
+  document.getElementById('phaseInfo').innerHTML=html;
+}
+
+// ─────────────────────────────────────────────────────────────
+// STEP 4 RENDER
+// ─────────────────────────────────────────────────────────────
+function renderStep4(samples,dibits) {
+  document.getElementById('audioChips').innerHTML=
+    chip('symbols',dibits.length)+
+    chip('samples',samples.length)+
+    chip('duration',(samples.length/SR).toFixed(3)+' s')+
+    chip('RMS',Math.sqrt(samples.reduce((a,x)=>a+x*x,0)/samples.length).toFixed(4))+
+    chip('bandwidth','~62 Hz');
+  // full waveform
+  drawWave(document.getElementById('waveCv'),samples,0,samples.length,null);
+  // zoomed: 8 data symbols past preamble
+  const zStart=PRE*SPY, zEnd=zStart+8*SPY;
+  const bounds=[];
+  for(let i=0;i<=8;i++) bounds.push(zStart+i*SPY);
+  drawWave(document.getElementById('waveZoomCv'),samples,zStart,zEnd,bounds);
+  // spectrum
+  drawSpectrum(document.getElementById('specCv'),samples);
+  // play button
+  document.getElementById('playBtn').disabled=false;
+  document.getElementById('playStat').textContent=
+    `${(samples.length/SR).toFixed(2)} s · 16-bit PCM · ${SR} Hz`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// STEP 5 RENDER
+// ─────────────────────────────────────────────────────────────
+function renderStep5(txDibits) {
+  const rxDibits=demodulate(gSamples);
+  const SHOW=12;
+  let html='<div style="overflow-x:auto"><table>'+
+    '<tr><th>symbol</th><th>sent dibit</th><th>rcvd dibit</th><th>phase Δ</th><th>match</th></tr>';
+  for(let i=PRE;i<Math.min(txDibits.length,PRE+SHOW);i++){
+    const tx=txDibits[i],rx=rxDibits[i];
+    const ok=tx[0]===rx[0]&&tx[1]===rx[1];
+    const deg=(PD[tx.join(',')]*180/Math.PI).toFixed(0)+'°';
+    const col=dibitColor(tx);
+    html+=`<tr><td>${i}</td>`+
+          `<td style="color:${col}">(${tx[0]},${tx[1]})</td>`+
+          `<td style="color:${ok?col:'var(--red)'}">(${rx[0]},${rx[1]})</td>`+
+          `<td>${deg}</td>`+
+          `<td>${ok?'<span class="ok">✓</span>':'<span class="err">✗</span>'}</td></tr>`;
+  }
+  if(txDibits.length>PRE+SHOW)
+    html+=`<tr><td colspan="5" style="color:var(--muted);text-align:center">… ${txDibits.length-PRE-SHOW} more symbols …</td></tr>`;
+  html+='</table></div>';
+  document.getElementById('demodBody').innerHTML=html;
+}
+
+// ─────────────────────────────────────────────────────────────
+// STEP 6 RENDER
+// ─────────────────────────────────────────────────────────────
+function renderStep6(txDibits) {
+  const rxDibits=demodulate(gSamples);
+  const allBitsSent=[...new Array(PRE).fill(0),...vcEncode(document.getElementById('msg').value),...new Array(TAIL).fill(0)];
+  const rxBits=viterbi(rxDibits);
+  const SHOW=20;
+  let errs=0;
+  let html='<div style="overflow-x:auto"><table>'+
+    '<tr><th>bit #</th><th>sent</th><th>decoded</th><th>match</th></tr>';
+  for(let i=0;i<Math.min(allBitsSent.length,SHOW);i++){
+    const s=allBitsSent[i],r=rxBits[i];
+    const ok=s===r; if(!ok)errs++;
+    html+=`<tr><td>${i}</td><td>${s}</td>`+
+          `<td style="color:${ok?'var(--green)':'var(--red)'}">${r!=null?r:'?'}</td>`+
+          `<td>${ok?'<span class="ok">✓</span>':'<span class="err">✗</span>'}</td></tr>`;
+  }
+  if(allBitsSent.length>SHOW)
+    html+=`<tr><td colspan="4" style="color:var(--muted);text-align:center">… ${allBitsSent.length-SHOW} more bits …</td></tr>`;
+  html+='</table></div>';
+  html+=`<div class="stat-row" style="margin-top:8px">`+
+        chip('bits decoded',rxBits.length)+
+        chip('errors',errs+' (in first '+SHOW+')')+
+        '</div>';
+  document.getElementById('viterbiBody').innerHTML=html;
+}
+
+// ─────────────────────────────────────────────────────────────
+// STEP 7 RENDER
+// ─────────────────────────────────────────────────────────────
+function renderStep7(dibits,original) {
+  const rxDibits=demodulate(gSamples);
+  const rxBits=viterbi(rxDibits);
+  const decoded=vcDecode(rxBits);
+  const ok=decoded===original;
+  let html=`<div class="decoded ${ok?'ok':'err'}">${ok?'✓ ':'✗ '}${escH(decoded)||'(empty)'}</div>`;
+  html+=`<div class="stat-row" style="margin-top:8px">`+
+        chip('sent',escH(original))+
+        chip('decoded',escH(decoded))+
+        chip('match',ok?'yes':'NO')+
+        '</div>';
+  document.getElementById('decodeBody').innerHTML=html;
+}
+
+// ─────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────
+function chip(lbl,val){
+  return `<span class="chip"><span class="lbl">${lbl}:</span>${val}</span>`;
+}
+function dibitColor(d){
+  return [,'var(--blue)','var(--green)','var(--red)','var(--orange)']
+         [d[0]*2+d[1]+1]||'var(--text)';
+}
+function escH(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUDIO PLAYBACK
+// ─────────────────────────────────────────────────────────────
+let audioCtx=null;
+document.getElementById('playBtn').addEventListener('click',async()=>{
+  if(!gSamples) return;
+  if(!audioCtx) audioCtx=new AudioContext();
+  if(audioCtx.state==='suspended') await audioCtx.resume();
+  const buf=audioCtx.createBuffer(1,gSamples.length,SR);
+  buf.getChannelData(0).set(gSamples);
+  const src=audioCtx.createBufferSource();
+  src.buffer=buf; src.connect(audioCtx.destination);
+  document.getElementById('playStat').textContent='▶ playing…';
+  src.onended=()=>document.getElementById('playStat').textContent='done';
+  src.start();
+});
+
+// ─────────────────────────────────────────────────────────────
+// EVENTS
+// ─────────────────────────────────────────────────────────────
+document.getElementById('encBtn').addEventListener('click',run);
+document.getElementById('msg').addEventListener('keydown',e=>{if(e.key==='Enter')run();});
+
+// Redraw canvases on resize
+window.addEventListener('resize',()=>{
+  if(gSamples){
+    drawWave(document.getElementById('waveCv'),gSamples,0,gSamples.length,null);
+    const zS=PRE*SPY,zE=zS+8*SPY,b=[];
+    for(let i=0;i<=8;i++)b.push(zS+i*SPY);
+    drawWave(document.getElementById('waveZoomCv'),gSamples,zS,zE,b);
+    drawSpectrum(document.getElementById('specCv'),gSamples);
+  }
+  if(gDibits) drawConstellation(document.getElementById('constCv'),gDibits);
+});
+
+// Auto-run on load
+run();
+</script>
+</body>
+</html>
